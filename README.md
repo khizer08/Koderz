@@ -176,7 +176,7 @@ It does not appear to be part of the working app and can be ignored while runnin
 3. Start the frontend from `frontend/`
 4. Open `http://localhost:3000`
 
-## Next cleanup items
+## Next cleanup items--
 
 These are not required just to run the project, but they would improve it:
 
