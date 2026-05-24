@@ -21,7 +21,9 @@ const algorithmSchema = new mongoose.Schema(
     pseudocode: String,
     code: {
       python: String,
-      javascript: String,
+      java: String,
+      cpp: String,
+      c: String,
     },
     steps: [{ type: String }],
     useCases: [{ type: String }],

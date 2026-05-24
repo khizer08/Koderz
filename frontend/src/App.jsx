@@ -8,20 +8,56 @@ const ALGORITHMS = {
     time: { best: "O(n)", avg: "O(n²)", worst: "O(n²)" }, space: "O(1)", stable: true,
     description: "Repeatedly swaps adjacent elements if they're in the wrong order. Simple but slow for large data.",
     color: "#f97316",
-    code: `def bubble_sort(arr):
+    code: {
+      python: `def bubble_sort(arr):
     n = len(arr)
     for i in range(n - 1):
         for j in range(n - i - 1):
             if arr[j] > arr[j + 1]:
                 arr[j], arr[j+1] = arr[j+1], arr[j]
     return arr`,
+      java: `public static void bubbleSort(int[] arr) {
+    int n = arr.length;
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                int temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+}`,
+      cpp: `void bubbleSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[j], arr[j + 1]);
+            }
+        }
+    }
+}`,
+      c: `void bubbleSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                int temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+}`,
+    },
   },
   selection: {
     name: "Selection Sort", category: "sorting",
     time: { best: "O(n²)", avg: "O(n²)", worst: "O(n²)" }, space: "O(1)", stable: false,
     description: "Finds the minimum element and places it at the front. Makes the fewest swaps.",
     color: "#a855f7",
-    code: `def selection_sort(arr):
+    code: {
+      python: `def selection_sort(arr):
     n = len(arr)
     for i in range(n - 1):
         min_idx = i
@@ -30,13 +66,48 @@ const ALGORITHMS = {
                 min_idx = j
         arr[i], arr[min_idx] = arr[min_idx], arr[i]
     return arr`,
+      java: `public static void selectionSort(int[] arr) {
+    int n = arr.length;
+    for (int i = 0; i < n - 1; i++) {
+        int minIdx = i;
+        for (int j = i + 1; j < n; j++) {
+            if (arr[j] < arr[minIdx]) minIdx = j;
+        }
+        int temp = arr[i];
+        arr[i] = arr[minIdx];
+        arr[minIdx] = temp;
+    }
+}`,
+      cpp: `void selectionSort(vector<int>& arr) {
+    int n = arr.size();
+    for (int i = 0; i < n - 1; i++) {
+        int minIdx = i;
+        for (int j = i + 1; j < n; j++) {
+            if (arr[j] < arr[minIdx]) minIdx = j;
+        }
+        swap(arr[i], arr[minIdx]);
+    }
+}`,
+      c: `void selectionSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        int minIdx = i;
+        for (int j = i + 1; j < n; j++) {
+            if (arr[j] < arr[minIdx]) minIdx = j;
+        }
+        int temp = arr[i];
+        arr[i] = arr[minIdx];
+        arr[minIdx] = temp;
+    }
+}`,
+    },
   },
   insertion: {
     name: "Insertion Sort", category: "sorting",
     time: { best: "O(n)", avg: "O(n²)", worst: "O(n²)" }, space: "O(1)", stable: true,
     description: "Builds sorted array one element at a time. Excellent for nearly-sorted or small arrays.",
     color: "#06b6d4",
-    code: `def insertion_sort(arr):
+    code: {
+      python: `def insertion_sort(arr):
     for i in range(1, len(arr)):
         key = arr[i]
         j = i - 1
@@ -45,13 +116,48 @@ const ALGORITHMS = {
             j -= 1
         arr[j + 1] = key
     return arr`,
+      java: `public static void insertionSort(int[] arr) {
+    for (int i = 1; i < arr.length; i++) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = key;
+    }
+}`,
+      cpp: `void insertionSort(vector<int>& arr) {
+    for (int i = 1; i < arr.size(); i++) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = key;
+    }
+}`,
+      c: `void insertionSort(int arr[], int n) {
+    for (int i = 1; i < n; i++) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = key;
+    }
+}`,
+    },
   },
   merge: {
     name: "Merge Sort", category: "sorting",
     time: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n log n)" }, space: "O(n)", stable: true,
     description: "Divide-and-conquer: splits array in half, sorts each, merges. Guaranteed O(n log n).",
     color: "#22c55e",
-    code: `def merge_sort(arr):
+    code: {
+      python: `def merge_sort(arr):
     if len(arr) <= 1:
         return arr
     mid = len(arr) // 2
@@ -68,13 +174,68 @@ def merge(l, r):
         else:
             result.append(r[j]); j += 1
     return result + l[i:] + r[j:]`,
+      java: `public static void mergeSort(int[] arr, int left, int right) {
+    if (left < right) {
+        int mid = (left + right) / 2;
+        mergeSort(arr, left, mid);
+        mergeSort(arr, mid + 1, right);
+        merge(arr, left, mid, right);
+    }
+}
+private static void merge(int[] arr, int l, int m, int r) {
+    int[] temp = new int[r - l + 1];
+    int i = l, j = m + 1, k = 0;
+    while (i <= m && j <= r)
+        temp[k++] = arr[i] <= arr[j] ? arr[i++] : arr[j++];
+    while (i <= m) temp[k++] = arr[i++];
+    while (j <= r) temp[k++] = arr[j++];
+    for (i = l; i <= r; i++) arr[i] = temp[i - l];
+}`,
+      cpp: `void merge(vector<int>& arr, int l, int m, int r) {
+    vector<int> temp(r - l + 1);
+    int i = l, j = m + 1, k = 0;
+    while (i <= m && j <= r)
+        temp[k++] = arr[i] <= arr[j] ? arr[i++] : arr[j++];
+    while (i <= m) temp[k++] = arr[i++];
+    while (j <= r) temp[k++] = arr[j++];
+    for (i = l; i <= r; i++) arr[i] = temp[i - l];
+}
+void mergeSort(vector<int>& arr, int l, int r) {
+    if (l < r) {
+        int m = (l + r) / 2;
+        mergeSort(arr, l, m);
+        mergeSort(arr, m + 1, r);
+        merge(arr, l, m, r);
+    }
+}`,
+      c: `void merge(int arr[], int l, int m, int r) {
+    int n1 = m - l + 1, n2 = r - m;
+    int L[n1], R[n2];
+    for (int i = 0; i < n1; i++) L[i] = arr[l + i];
+    for (int j = 0; j < n2; j++) R[j] = arr[m + 1 + j];
+    int i = 0, j = 0, k = l;
+    while (i < n1 && j < n2)
+        arr[k++] = L[i] <= R[j] ? L[i++] : R[j++];
+    while (i < n1) arr[k++] = L[i++];
+    while (j < n2) arr[k++] = R[j++];
+}
+void mergeSort(int arr[], int l, int r) {
+    if (l < r) {
+        int m = (l + r) / 2;
+        mergeSort(arr, l, m);
+        mergeSort(arr, m + 1, r);
+        merge(arr, l, m, r);
+    }
+}`,
+    },
   },
   quick: {
     name: "Quick Sort", category: "sorting",
     time: { best: "O(n log n)", avg: "O(n log n)", worst: "O(n²)" }, space: "O(log n)", stable: false,
     description: "Picks a pivot, partitions array around it. Fast in practice, widely used.",
     color: "#eab308",
-    code: `def quick_sort(arr, low=0, high=None):
+    code: {
+      python: `def quick_sort(arr, low=0, high=None):
     if high is None: high = len(arr) - 1
     if low < high:
         pi = partition(arr, low, high)
@@ -91,13 +252,80 @@ def partition(arr, low, high):
             arr[i], arr[j] = arr[j], arr[i]
     arr[i+1], arr[high] = arr[high], arr[i+1]
     return i + 1`,
+      java: `public static int partition(int[] arr, int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;
+    for (int j = low; j < high; j++) {
+        if (arr[j] <= pivot) {
+            i++;
+            int temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+        }
+    }
+    int temp = arr[i + 1];
+    arr[i + 1] = arr[high];
+    arr[high] = temp;
+    return i + 1;
+}
+public static void quickSort(int[] arr, int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}`,
+      cpp: `int partition(vector<int>& arr, int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;
+    for (int j = low; j < high; j++) {
+        if (arr[j] <= pivot) {
+            i++;
+            swap(arr[i], arr[j]);
+        }
+    }
+    swap(arr[i + 1], arr[high]);
+    return i + 1;
+}
+void quickSort(vector<int>& arr, int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}`,
+      c: `int partition(int arr[], int low, int high) {
+    int pivot = arr[high];
+    int i = low - 1;
+    for (int j = low; j < high; j++) {
+        if (arr[j] <= pivot) {
+            i++;
+            int temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+        }
+    }
+    int temp = arr[i + 1];
+    arr[i + 1] = arr[high];
+    arr[high] = temp;
+    return i + 1;
+}
+void quickSort(int arr[], int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}`,
+    },
   },
   binary: {
     name: "Binary Search", category: "searching",
     time: { best: "O(1)", avg: "O(log n)", worst: "O(log n)" }, space: "O(1)", stable: null,
     description: "Efficiently finds target in sorted array by halving search space each step.",
     color: "#ec4899",
-    code: `def binary_search(arr, target):
+    code: {
+      python: `def binary_search(arr, target):
     left, right = 0, len(arr) - 1
     while left <= right:
         mid = (left + right) // 2
@@ -108,6 +336,37 @@ def partition(arr, low, high):
         else:
             right = mid - 1
     return -1`,
+      java: `public static int binarySearch(int[] arr, int target) {
+    int left = 0, right = arr.length - 1;
+    while (left <= right) {
+        int mid = (left + right) / 2;
+        if (arr[mid] == target) return mid;
+        else if (arr[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+}`,
+      cpp: `int binarySearch(vector<int>& arr, int target) {
+    int left = 0, right = arr.size() - 1;
+    while (left <= right) {
+        int mid = (left + right) / 2;
+        if (arr[mid] == target) return mid;
+        else if (arr[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+}`,
+      c: `int binarySearch(int arr[], int n, int target) {
+    int left = 0, right = n - 1;
+    while (left <= right) {
+        int mid = (left + right) / 2;
+        if (arr[mid] == target) return mid;
+        else if (arr[mid] < target) left = mid + 1;
+        else right = mid - 1;
+    }
+    return -1;
+}`,
+    },
   },
 };
 
@@ -300,8 +559,11 @@ function VisualizerBar({ value, max, state, height = 180 }) {
   const colors = { comparing: "#f97316", swapped: "#22c55e", sorted: "#3b82f6", default: "#334155" };
   const color = colors[state] || colors.default;
   const barH = Math.max(4, (value / max) * height);
+  // Smooth animation with easing
+  const transitionDuration = 0.12;
+  const easing = "easeInOut";
   return (
-    <motion.div animate={{ height: barH, backgroundColor: color }} transition={{ duration: 0.15 }}
+    <motion.div animate={{ height: barH, backgroundColor: color }} transition={{ duration: transitionDuration, ease: easing }}
       style={{ width: "100%", borderRadius: "3px 3px 0 0", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 2, fontSize: 9, color: "#fff", fontWeight: "bold", minWidth: 18 }}>
       {value}
     </motion.div>
@@ -314,14 +576,26 @@ export default function KoderzApp() {
   const [selectedAlgo, setSelectedAlgo] = useState("bubble");
   const [compareA, setCompareA] = useState("bubble");
   const [compareB, setCompareB] = useState("merge");
+  const [language, setLanguage] = useState("python");
 
   // Visualizer state
   const [vizArray, setVizArray] = useState([38, 27, 43, 3, 9, 82, 10]);
   const [vizSteps, setVizSteps] = useState([]);
   const [vizStep, setVizStep] = useState(0);
   const [vizPlaying, setVizPlaying] = useState(false);
-  const [vizSpeed, setVizSpeed] = useState(400);
+  const [vizSpeed, setVizSpeed] = useState(50); // 1-100 scale
   const vizRef = useRef(null);
+
+  // ─── Speed Scaling Function (Exponential) ─────────────────────────────────
+  const getActualDelay = (speedValue) => {
+    // Exponential scaling: Math.pow creates smooth non-linear progression
+    // speedValue range: 1-100
+    // Maps to delay range: 2500ms (ultra slow) to 50ms (ultra fast)
+    const normalized = speedValue / 100; // 0.01 to 1.0
+    const exponential = Math.pow(normalized, 1.8); // Exponential curve
+    const delay = 2500 * (1 - exponential) + 50; // 2500ms to 50ms range
+    return Math.round(delay);
+  };
 
   // Analyzer state
   const [code, setCode] = useState(`def find_duplicates(arr):
@@ -354,7 +628,8 @@ export default function KoderzApp() {
 
   useEffect(() => {
     if (vizPlaying && vizStep < vizSteps.length - 1) {
-      vizRef.current = setTimeout(() => setVizStep(s => s + 1), vizSpeed);
+      const actualDelay = getActualDelay(vizSpeed);
+      vizRef.current = setTimeout(() => setVizStep(s => s + 1), actualDelay);
     } else if (vizStep >= vizSteps.length - 1) {
       setVizPlaying(false);
     }
@@ -507,9 +782,18 @@ export default function KoderzApp() {
 
                     <div>
                       <div style={styles.card}>
-                        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14, color: "#64748b" }}>PYTHON IMPLEMENTATION</div>
-                        <pre style={{ fontSize: 12, lineHeight: 1.7, color: "#a5f3fc", background: "#020917", padding: 16, borderRadius: 8, overflow: "auto" }}>
-                          <code>{algo.code}</code>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#64748b" }}>CODE IMPLEMENTATION</div>
+                          <select value={language} onChange={e => setLanguage(e.target.value)}
+                            style={{ background: "#0f172a", color: "#e2e8f0", border: "1px solid rgba(148,163,184,0.2)", borderRadius: 6, padding: "6px 10px", fontFamily: "inherit", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>
+                            <option value="python">Python</option>
+                            <option value="java">Java</option>
+                            <option value="cpp">C++</option>
+                            <option value="c">C</option>
+                          </select>
+                        </div>
+                        <pre style={{ fontSize: 12, lineHeight: 1.7, color: "#a5f3fc", background: "#020917", padding: 16, borderRadius: 8, overflow: "auto", maxHeight: 400 }}>
+                          <code>{typeof algo.code === 'string' ? algo.code : algo.code[language]}</code>
                         </pre>
                         <button onClick={() => { setSelectedAlgo(selectedAlgo); setPage("visualize"); }}
                           style={{ ...styles.btn("primary"), marginTop: 14, width: "100%" }}>
@@ -538,10 +822,21 @@ export default function KoderzApp() {
                       </button>
                     ))}
                     <div style={{ borderTop: "1px solid rgba(148,163,184,0.1)", marginTop: 16, paddingTop: 16 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 10 }}>SPEED</div>
-                      <input type="range" min={50} max={800} value={800 - vizSpeed + 50} onChange={e => setVizSpeed(800 - parseInt(e.target.value) + 50)}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>SPEED</div>
+                        <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 600 }}>
+                          {getActualDelay(vizSpeed)}ms per step
+                        </span>
+                      </div>
+                      <input type="range" min={1} max={100} value={vizSpeed} onChange={e => setVizSpeed(parseInt(e.target.value))}
                         style={{ width: "100%", accentColor: "#f97316" }} />
-                      <div style={{ fontSize: 11, color: "#475569", marginTop: 4 }}>{vizSpeed < 200 ? "Fast" : vizSpeed < 500 ? "Medium" : "Slow"}</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#475569", marginTop: 8 }}>
+                        <span>Ultra Slow</span>
+                        <span style={{ textAlign: "center" }}>
+                          {vizSpeed <= 20 ? "🐢 Ultra Slow" : vizSpeed <= 40 ? "🐢 Slow" : vizSpeed <= 60 ? "⚡ Medium" : vizSpeed <= 80 ? "⚡ Fast" : "🚀 Ultra Fast"}
+                        </span>
+                        <span>Ultra Fast</span>
+                      </div>
                     </div>
                   </div>
                 </div>
