@@ -541,7 +541,7 @@ function BenchmarkChart({ algo1, algo2 }) {
               const val = scale(a, n);
               const pct = Math.max(2, (val / max) * 100);
               return (
-                <motion.div key={a} initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: i * 0.1 }}
+                <motion.div key={a} initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, delay: i * 0.08, ease: "easeOut" }}
                   style={{ height: 20, background: i === 0 ? c1 : c2, borderRadius: 4, display: "flex", alignItems: "center", paddingLeft: 8, fontSize: 10, color: "#000", fontWeight: "bold", minWidth: 40 }}>
                   {val.toLocaleString()}
                 </motion.div>
