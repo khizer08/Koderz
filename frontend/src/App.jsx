@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Editor from "@monaco-editor/react";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // ─── Theme & Constants ────────────────────────────────────────────────────────
 const ALGORITHMS = {
@@ -840,6 +841,91 @@ function staticAnalysis(code, ast) {
   }
 }
 
+// ─── Phase 6: AI Intent Understanding (Gemini Integration) ──────────────────
+async function analyzeWithAI(code, language, staticAnalysis, ast) {
+  try {
+    if (!code || code.length < 10) {
+      return { intent: "Code too short", confidence: 0, suggestions: [] };
+    }
+
+    const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+    if (!apiKey) {
+      return { intent: "API key not configured", confidence: 0, suggestions: [] };
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // Prepare context for AI analysis
+    const detectedAlgos = staticAnalysis?.algorithms?.map(a => a.algorithm).join(", ") || "None";
+    const detectedSmells = staticAnalysis?.smells?.map(s => s.smell).join(", ") || "None";
+    
+    const prompt = `You are an expert algorithm and code analysis AI. Analyze this ${language} code and provide insights.
+
+CODE TO ANALYZE:
+\`\`\`${language}
+${code}
+\`\`\`
+
+STATIC ANALYSIS CONTEXT:
+- Detected Algorithms: ${detectedAlgos}
+- Code Smells: ${detectedSmells}
+- Functions Detected: ${ast?.functions?.length || 0}
+- Loops: ${ast?.loops?.length || 0}
+- Classes: ${ast?.classes?.length || 0}
+- Max Nesting Depth: ${ast?.maxDepth || 0}
+- Contains Recursion: ${ast?.recursiveCalls?.length > 0 ? "Yes" : "No"}
+
+ANALYSIS TASK:
+1. What is the LIKELY INTENT of this code? (e.g., "Sorting an array", "Finding duplicates", "Tree traversal")
+2. What ALGORITHM does it implement or aim to implement?
+3. Is the code COMPLETE or INCOMPLETE? What logic might be missing?
+4. What is the likely TIME COMPLEXITY? Why?
+5. OPTIMIZATION SUGGESTIONS (3-5 concrete tips)
+6. LEARNING INSIGHTS - What pattern does this teach?
+
+Provide a JSON response ONLY (no markdown, no explanation) with this exact structure:
+{
+  "intent": "Brief description of what the code is trying to do",
+  "algorithm": "Detected or likely algorithm",
+  "isComplete": true/false,
+  "missingLogic": ["item1", "item2"] or [],
+  "timeComplexity": "O(n), O(n²), etc",
+  "explanation": "Why this complexity",
+  "optimizations": ["suggestion1", "suggestion2", "suggestion3"],
+  "insights": "Educational value and learning points",
+  "confidence": 0.75
+}`;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    
+    // Try to parse JSON response
+    let aiAnalysis = {};
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      aiAnalysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    } catch (e) {
+      // If JSON parse fails, extract key information from text
+      aiAnalysis = {
+        intent: responseText.split("\n")[0],
+        algorithm: "Could not parse",
+        isComplete: false,
+        missingLogic: [],
+        timeComplexity: "Unknown",
+        explanation: responseText,
+        optimizations: [],
+        insights: "",
+        confidence: 0.5,
+      };
+    }
+
+    return { ...aiAnalysis, aiPowered: true };
+  } catch (error) {
+    return { intent: "AI analysis unavailable", confidence: 0, suggestions: [], error: error.message };
+  }
+}
+
 // ─── Bar Chart Component ───────────────────────────────────────────────────────
 function BenchmarkChart({ algo1, algo2 }) {
   const sizes = [10, 50, 100, 500, 1000];
@@ -933,6 +1019,9 @@ export default function KoderzApp() {
   const [editorLanguage, setEditorLanguage] = useState("python");
   const [analysis, setAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const debounceTimer = useRef(null);
 
   const currentStep = vizSteps[vizStep] || null;
   const maxVal = vizArray.length ? Math.max(...vizArray) : 1;
@@ -976,9 +1065,30 @@ export default function KoderzApp() {
     setAnalyzing(true);
     setTimeout(() => {
       // Phase 4: Pass language to enable language-specific AST parsing
-      setAnalysis(analyzeCode(code, editorLanguage));
+      const result = analyzeCode(code, editorLanguage);
+      setAnalysis(result);
       setAnalyzing(false);
+      
+      // Phase 6: Trigger debounced AI analysis
+      triggerAIAnalysis(result);
     }, 900);
+  };
+
+  // Phase 6: Debounced AI analysis (2-3 seconds after user stops typing)
+  const triggerAIAnalysis = (analysisResult) => {
+    // Clear existing timer
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    
+    setAiAnalyzing(true);
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        const aiResult = await analyzeWithAI(code, editorLanguage, analysisResult.staticAnalysis, analysisResult.ast);
+        setAiAnalysis(aiResult);
+      } catch (e) {
+        setAiAnalysis({ error: "AI analysis failed", confidence: 0 });
+      }
+      setAiAnalyzing(false);
+    }, 2500); // 2.5 second debounce
   };
 
   const navItems = [
@@ -1274,7 +1384,22 @@ export default function KoderzApp() {
                       height="340px"
                       language={editorLanguage}
                       value={code}
-                      onChange={(value) => setCode(value || "")}
+                      onChange={(value) => {
+                        setCode(value || "");
+                        // Phase 6: Trigger debounced AI analysis on every keystroke
+                        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+                        setAiAnalyzing(true);
+                        debounceTimer.current = setTimeout(async () => {
+                          try {
+                            const result = analyzeCode(value || "", editorLanguage);
+                            const aiResult = await analyzeWithAI(value || "", editorLanguage, result.staticAnalysis, result.ast);
+                            setAiAnalysis(aiResult);
+                          } catch (e) {
+                            setAiAnalysis({ error: "AI analysis failed" });
+                          }
+                          setAiAnalyzing(false);
+                        }, 2500); // 2.5 second debounce
+                      }}
                       theme="vs-dark"
                       options={{
                         minimap: { enabled: false },
@@ -1401,6 +1526,73 @@ export default function KoderzApp() {
                             </div>
                           ))}
                         </div>
+                      )}
+
+                      {/* Phase 6: AI Intent Analysis */}
+                      {aiAnalyzing && (
+                        <div style={{ ...styles.card, textAlign: "center", padding: 20 }}>
+                          <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} style={{ fontSize: 28, marginBottom: 10 }}>🤖</motion.div>
+                          <div style={{ color: "#64748b", fontSize: 12 }}>AI analyzing code intent...</div>
+                        </div>
+                      )}
+
+                      {aiAnalysis && !aiAnalyzing && (
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={styles.card}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                            🤖 AI INTENT ANALYSIS (Powered by Gemini)
+                            {aiAnalysis.confidence && <span style={styles.badge("#a78bfa", 8)}>Trust: {Math.round(aiAnalysis.confidence * 100)}%</span>}
+                          </div>
+
+                          {aiAnalysis.intent && (
+                            <div style={{ marginBottom: 14, padding: 12, background: "rgba(167,139,250,0.08)", borderLeft: "3px solid #a78bfa", borderRadius: 6 }}>
+                              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>INTENT</div>
+                              <div style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 500 }}>{aiAnalysis.intent}</div>
+                            </div>
+                          )}
+
+                          {aiAnalysis.algorithm && (
+                            <div style={{ marginBottom: 14, padding: 12, background: "rgba(6,182,212,0.08)", borderLeft: "3px solid #06b6d4", borderRadius: 6 }}>
+                              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>DETECTED ALGORITHM</div>
+                              <div style={{ fontSize: 12, color: "#e2e8f0", fontWeight: 500 }}>{aiAnalysis.algorithm}</div>
+                            </div>
+                          )}
+
+                          {aiAnalysis.isComplete === false && aiAnalysis.missingLogic && aiAnalysis.missingLogic.length > 0 && (
+                            <div style={{ marginBottom: 14, padding: 12, background: "rgba(249,115,22,0.08)", borderLeft: "3px solid #f97316", borderRadius: 6 }}>
+                              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>⚠️ INCOMPLETE - MISSING LOGIC</div>
+                              {aiAnalysis.missingLogic.map((logic, i) => (
+                                <div key={i} style={{ fontSize: 11, color: "#f97316", marginBottom: 4 }}>• {logic}</div>
+                              ))}
+                            </div>
+                          )}
+
+                          {aiAnalysis.timeComplexity && (
+                            <div style={{ marginBottom: 14, padding: 12, background: "rgba(34,197,94,0.08)", borderLeft: "3px solid #22c55e", borderRadius: 6 }}>
+                              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>COMPLEXITY ANALYSIS</div>
+                              <div style={{ fontSize: 12, color: "#22c55e", fontWeight: 600, marginBottom: 6 }}>{aiAnalysis.timeComplexity}</div>
+                              {aiAnalysis.explanation && <div style={{ fontSize: 10, color: "#64748b", lineHeight: 1.5 }}>{aiAnalysis.explanation}</div>}
+                            </div>
+                          )}
+
+                          {aiAnalysis.optimizations && aiAnalysis.optimizations.length > 0 && (
+                            <div style={{ marginBottom: 14, padding: 12, background: "rgba(234,179,8,0.08)", borderLeft: "3px solid #eab308", borderRadius: 6 }}>
+                              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>💡 AI OPTIMIZATION SUGGESTIONS</div>
+                              {aiAnalysis.optimizations.map((opt, i) => (
+                                <div key={i} style={{ fontSize: 11, color: "#e2e8f0", marginBottom: 6, display: "flex", gap: 8 }}>
+                                  <span style={{ color: "#eab308", flexShrink: 0 }}>→</span>
+                                  <span>{opt}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {aiAnalysis.insights && (
+                            <div style={{ padding: 12, background: "rgba(236,72,153,0.08)", borderLeft: "3px solid #ec4899", borderRadius: 6 }}>
+                              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>📚 LEARNING INSIGHTS</div>
+                              <div style={{ fontSize: 11, color: "#e2e8f0", lineHeight: 1.6 }}>{aiAnalysis.insights}</div>
+                            </div>
+                          )}
+                        </motion.div>
                       )}
                     </motion.div>
                   )}
