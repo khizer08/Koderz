@@ -542,6 +542,8 @@ function analyzeCode(code, language = "python") {
     suggestions: suggestions[time] || [],
     ast: ast,  // Return AST for Phase 5 & 6
     parsingStatus: parseResult.parsed ? "✓ Tolerant parsing successful" : "Using heuristic fallback",
+    // Phase 5: Static Analysis Integration
+    staticAnalysis: staticAnalysis(code, ast),
   };
 }
 
@@ -664,6 +666,177 @@ function parseCode(code, language) {
   } catch (error) {
     // Fall back to empty AST if any error occurs
     return { safe: true, ast: {}, confidence: 0, error: "Parser encountered error, using fallback" };
+  }
+}
+
+// ─── Phase 5: Static Analysis Engine ───────────────────────────────────────────
+function staticAnalysis(code, ast) {
+  try {
+    if (!code || !ast) return { algorithms: [], smells: [], confidence: 0 };
+    
+    const detected = [];
+    const smells = [];
+    const codeStr = code.toLowerCase();
+    
+    // Helper: Check for code patterns
+    const hasPattern = (patterns) => patterns.some(p => codeStr.includes(p));
+    
+    // 1. BUBBLE SORT DETECTION
+    const bubblePatterns = ["arr[i]", "arr[j]", "swap", "compare", "adjacent"];
+    const isBubble = ast.loops?.length >= 2 && 
+                     ast.maxDepth >= 2 && 
+                     (hasPattern(bubblePatterns) || /for.*for.*if.*>|for.*for.*if.*</.test(code));
+    if (isBubble) {
+      detected.push({
+        algorithm: "Bubble Sort",
+        category: "Sorting",
+        confidence: 85,
+        description: "Detected nested loops with pairwise comparisons and swaps",
+        timeComplexity: "O(n²)",
+        improvement: "Consider Merge Sort O(n log n) for better performance",
+      });
+    }
+    
+    // 2. SELECTION SORT DETECTION
+    const selectionPatterns = ["min", "max", "smallest", "largest"];
+    const isSelection = ast.loops?.length >= 2 && 
+                        ast.maxDepth >= 2 && 
+                        hasPattern(selectionPatterns);
+    if (isSelection && !isBubble) {
+      detected.push({
+        algorithm: "Selection Sort",
+        category: "Sorting",
+        confidence: 80,
+        description: "Detected nested loops with min/max search pattern",
+        timeComplexity: "O(n²)",
+        improvement: "O(n²) but with fewer writes than Bubble Sort. Consider Merge Sort for O(n log n)",
+      });
+    }
+    
+    // 3. INSERTION SORT DETECTION
+    const insertionPatterns = ["insert", "insertion", "shift"];
+    const isInsertion = ast.loops?.some(l => l.type === "while") && 
+                        hasPattern(insertionPatterns);
+    if (isInsertion) {
+      detected.push({
+        algorithm: "Insertion Sort",
+        category: "Sorting",
+        confidence: 78,
+        description: "Detected insertion/shift pattern with inner while loop",
+        timeComplexity: "O(n²) average, O(n) best",
+        improvement: "Good for small arrays. For large data, use Merge or Quick Sort",
+      });
+    }
+    
+    // 4. MERGE SORT DETECTION
+    const mergePatterns = ["divide", "merge", "conquer", "mid", "split"];
+    const isMerge = ast.recursiveCalls && ast.recursiveCalls.length > 0 && 
+                    (hasPattern(mergePatterns) || /mid.*=|split|merge/.test(code));
+    if (isMerge) {
+      detected.push({
+        algorithm: "Merge Sort",
+        category: "Sorting",
+        confidence: 88,
+        description: "Detected divide-and-conquer recursion with merge pattern",
+        timeComplexity: "O(n log n) guaranteed",
+        improvement: "Excellent! Optimal for comparison sorts. Already O(n log n)",
+      });
+    }
+    
+    // 5. QUICK SORT DETECTION
+    const quickPatterns = ["pivot", "partition", "left", "right"];
+    const isQuick = ast.recursiveCalls && ast.recursiveCalls.length > 0 && 
+                    hasPattern(quickPatterns);
+    if (isQuick && !isMerge) {
+      detected.push({
+        algorithm: "Quick Sort",
+        category: "Sorting",
+        confidence: 85,
+        description: "Detected pivot-based partition with recursive calls",
+        timeComplexity: "O(n log n) average, O(n²) worst",
+        improvement: "Good average case! Watch for pathological cases (reverse sorted)",
+      });
+    }
+    
+    // 6. BINARY SEARCH DETECTION
+    const binaryPatterns = ["left", "right", "mid", "binary"];
+    const isBinary = ast.loops?.length >= 1 && 
+                     /mid\s*=|>>> *1|div.*2|>> *1/.test(code) &&
+                     hasPattern(binaryPatterns);
+    if (isBinary) {
+      detected.push({
+        algorithm: "Binary Search",
+        category: "Searching",
+        confidence: 90,
+        description: "Detected logarithmic search with midpoint calculation",
+        timeComplexity: "O(log n)",
+        improvement: "Excellent! O(log n) is optimal for searching sorted arrays",
+      });
+    }
+    
+    // 7. DYNAMIC PROGRAMMING DETECTION
+    const dpPatterns = ["memo", "cache", "dp", "table", "computed", "dp["];
+    const isDP = (ast.classes?.length > 0 || /dict|map|array\[.*\]\[/.test(code)) && 
+                 hasPattern(dpPatterns);
+    if (isDP) {
+      detected.push({
+        algorithm: "Dynamic Programming",
+        category: "Optimization",
+        confidence: 82,
+        description: "Detected memoization/caching pattern for overlapping subproblems",
+        timeComplexity: "Depends on table size",
+        improvement: "Good! Check table initialization and recurrence relation",
+      });
+    }
+    
+    // 8. GREEDY ALGORITHM DETECTION
+    const greedyPatterns = ["greedy", "best", "maximum", "minimum", "local"];
+    const isGreedy = ast.conditionals && ast.conditionals.length > 0 && 
+                     hasPattern(greedyPatterns);
+    if (isGreedy && !isDP) {
+      detected.push({
+        algorithm: "Greedy Algorithm",
+        category: "Optimization",
+        confidence: 70,
+        description: "Detected greedy optimization pattern",
+        timeComplexity: "Problem-dependent",
+        improvement: "Verify greedy choice property holds for this problem",
+      });
+    }
+    
+    // CODE SMELL DETECTION
+    if (ast.maxDepth > 3) {
+      smells.push({
+        smell: "Deep nesting",
+        severity: "high",
+        suggestion: "Consider extracting nested logic to functions or using early returns",
+      });
+    }
+    
+    if (ast.loops && ast.loops.length > 3) {
+      smells.push({
+        smell: "Multiple loops",
+        severity: "medium",
+        suggestion: "Multiple sequential loops can sometimes be combined into single pass",
+      });
+    }
+    
+    if (code.split("\n").length > 100 && !ast.classes || ast.classes.length === 0) {
+      smells.push({
+        smell: "Large single function",
+        severity: "medium",
+        suggestion: "Consider breaking this into smaller, focused functions",
+      });
+    }
+    
+    return {
+      algorithms: detected,
+      smells: smells,
+      confidence: detected.length > 0 ? 85 : 60,
+      totalPatterns: detected.length,
+    };
+  } catch (error) {
+    return { algorithms: [], smells: [], confidence: 0, error: "Analysis failed" };
   }
 }
 
@@ -1179,6 +1352,45 @@ export default function KoderzApp() {
                           </div>
                         )}
                       </div>
+
+                      {/* Phase 5: Static Analysis Results */}
+                      {analysis.staticAnalysis && analysis.staticAnalysis.algorithms && analysis.staticAnalysis.algorithms.length > 0 && (
+                        <div style={styles.card}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 14 }}>🔍 DETECTED ALGORITHMS</div>
+                          {analysis.staticAnalysis.algorithms.map((algo, i) => (
+                            <div key={i} style={{ marginBottom: 14, padding: 12, background: "#020917", borderRadius: 8, border: "1px solid rgba(136,136,136,0.15)" }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: "#06b6d4" }}>{algo.algorithm}</div>
+                                <span style={styles.badge("#06b6d4", 8)}>Conf: {algo.confidence}%</span>
+                              </div>
+                              <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.5, marginBottom: 8 }}>{algo.description}</div>
+                              <div style={{ display: "flex", gap: 16, fontSize: 10, color: "#64748b" }}>
+                                <span><span style={{ color: "#f97316" }}>Time:</span> {algo.timeComplexity}</span>
+                                <span><span style={{ color: "#eab308" }}>Category:</span> {algo.category}</span>
+                              </div>
+                              <div style={{ fontSize: 10, color: "#22c55e", marginTop: 8, paddingTop: 8, borderTop: "1px solid rgba(34,197,94,0.1)" }}>
+                                💡 {algo.improvement}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Code Smell Detection */}
+                      {analysis.staticAnalysis && analysis.staticAnalysis.smells && analysis.staticAnalysis.smells.length > 0 && (
+                        <div style={styles.card}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 14 }}>⚠️ CODE SMELLS</div>
+                          {analysis.staticAnalysis.smells.map((smell, i) => (
+                            <div key={i} style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.6, padding: "10px 0", borderBottom: i < analysis.staticAnalysis.smells.length - 1 ? "1px solid rgba(148,163,184,0.06)" : "none", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                              <span style={{ color: smell.severity === "high" ? "#f97316" : "#eab308", flexShrink: 0, marginTop: 2 }}>●</span>
+                              <div>
+                                <div style={{ fontWeight: 600, color: "#e2e8f0" }}>{smell.smell}</div>
+                                <div style={{ color: "#64748b" }}>{smell.suggestion}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {analysis.suggestions.length > 0 && (
                         <div style={styles.card}>
