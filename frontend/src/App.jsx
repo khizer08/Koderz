@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Editor from "@monaco-editor/react";
 
 // ─── Theme & Constants ────────────────────────────────────────────────────────
 const ALGORITHMS = {
@@ -605,6 +606,7 @@ export default function KoderzApp() {
             if arr[i] == arr[j]:
                 result.append(arr[i])
     return result`);
+  const [editorLanguage, setEditorLanguage] = useState("python");
   const [analysis, setAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
 
@@ -932,9 +934,41 @@ export default function KoderzApp() {
               <h2 style={styles.h2}>◎ Code Complexity Analyzer</h2>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 20 }}>
                 <div style={styles.card}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 14 }}>PASTE YOUR CODE</div>
-                  <textarea value={code} onChange={e => setCode(e.target.value)}
-                    style={{ width: "100%", minHeight: 320, background: "#020917", color: "#a5f3fc", border: "1px solid rgba(148,163,184,0.1)", borderRadius: 8, padding: 16, fontFamily: "inherit", fontSize: 13, lineHeight: 1.7, resize: "vertical", outline: "none" }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>CODE EDITOR</div>
+                    <select value={editorLanguage} onChange={e => setEditorLanguage(e.target.value)}
+                      style={{ background: "#0f172a", color: "#e2e8f0", border: "1px solid rgba(148,163,184,0.2)", borderRadius: 6, padding: "6px 10px", fontFamily: "inherit", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>
+                      <option value="python">Python</option>
+                      <option value="java">Java</option>
+                      <option value="cpp">C++</option>
+                      <option value="c">C</option>
+                    </select>
+                  </div>
+                  <div style={{ background: "#020917", borderRadius: 8, border: "1px solid rgba(148,163,184,0.1)", overflow: "hidden" }}>
+                    <Editor
+                      height="340px"
+                      language={editorLanguage}
+                      value={code}
+                      onChange={(value) => setCode(value || "")}
+                      theme="vs-dark"
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                        lineNumbers: "on",
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                        wordWrap: "on",
+                        formatOnPaste: true,
+                        formatOnType: true,
+                        tabSize: 4,
+                        insertSpaces: true,
+                        renderWhitespace: "selection",
+                        smoothScrolling: true,
+                        cursorBlinking: "blink",
+                      }}
+                    />
+                  </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
                     <button onClick={handleAnalyze} disabled={analyzing} style={styles.btn("primary")}>
                       {analyzing ? "⟳ Analyzing..." : "◎ Analyze Complexity"}
