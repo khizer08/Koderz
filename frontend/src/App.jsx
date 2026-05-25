@@ -841,6 +841,84 @@ function staticAnalysis(code, ast) {
   }
 }
 
+// ─── Phase 7 Helper: Code Snippet Generation ──────────────────────────────
+function generateOptimizationSnippets(algorithm, language = "python") {
+  const snippets = {
+    python: {
+      "hash-set-optimization": `# Optimize with hash set for O(n) instead of O(n²)
+def find_duplicates_optimized(arr):
+    seen = set()
+    duplicates = set()
+    for num in arr:
+        if num in seen:
+            duplicates.add(num)
+        seen.add(num)
+    return list(duplicates)`,
+      "sort-first": `# Sort first, then compare adjacent elements: O(n log n)
+def find_duplicates_sorted(arr):
+    if not arr: return []
+    arr_sorted = sorted(arr)
+    duplicates = []
+    for i in range(len(arr_sorted) - 1):
+        if arr_sorted[i] == arr_sorted[i + 1]:
+            duplicates.append(arr_sorted[i])
+    return duplicates`,
+      "two-pointer": `# Two-pointer technique for sorted arrays
+def find_duplicates_two_pointer(arr):
+    if not arr: return []
+    arr_sorted = sorted(arr)
+    left, right = 0, len(arr_sorted) - 1
+    duplicates = []
+    while left < right:
+        if arr_sorted[left] == arr_sorted[right]:
+            duplicates.append(arr_sorted[left])
+            left += 1
+        else:
+            left += 1
+    return duplicates`,
+    },
+    java: {
+      "hash-set-optimization": `// Optimize with HashSet for O(n) instead of O(n²)
+public static Set<Integer> findDuplicatesOptimized(int[] arr) {
+    Set<Integer> seen = new HashSet<>();
+    Set<Integer> duplicates = new HashSet<>();
+    for (int num : arr) {
+        if (!seen.add(num)) {
+            duplicates.add(num);
+        }
+    }
+    return duplicates;
+}`,
+      "sort-first": `// Sort first, then compare adjacent: O(n log n)
+public static Set<Integer> findDuplicatesSorted(int[] arr) {
+    Set<Integer> duplicates = new HashSet<>();
+    Arrays.sort(arr);
+    for (int i = 0; i < arr.length - 1; i++) {
+        if (arr[i] == arr[i + 1]) {
+            duplicates.add(arr[i]);
+        }
+    }
+    return duplicates;
+}`,
+    },
+    cpp: {
+      "hash-set-optimization": `// Optimize with unordered_set for O(n) instead of O(n²)
+vector<int> findDuplicatesOptimized(vector<int> arr) {
+    unordered_set<int> seen;
+    set<int> duplicates;
+    for (int num : arr) {
+        if (seen.count(num)) {
+            duplicates.insert(num);
+        }
+        seen.insert(num);
+    }
+    return vector<int>(duplicates.begin(), duplicates.end());
+}`,
+    },
+  };
+  return snippets[language] || {};
+}
+
 // ─── Phase 6: AI Intent Understanding (Gemini Integration) ──────────────────
 async function analyzeWithAI(code, language, staticAnalysis, ast) {
   try {
@@ -1021,6 +1099,8 @@ export default function KoderzApp() {
   const [analyzing, setAnalyzing] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [suggestionsExpanded, setSuggestionsExpanded] = useState(true);
+  const [copiedIndex, setCopiedIndex] = useState(null);
   const debounceTimer = useRef(null);
 
   const currentStep = vizSteps[vizStep] || null;
@@ -1478,6 +1558,20 @@ export default function KoderzApp() {
                         )}
                       </div>
 
+                      {/* Phase 7: Pattern Detection Highlights */}
+                      {analysis.detectedPatterns && analysis.detectedPatterns.length > 0 && (
+                        <div style={styles.card}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 12 }}>🎯 CODE PATTERNS DETECTED</div>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            {analysis.detectedPatterns.map((pattern, i) => (
+                              <div key={i} style={{ padding: "6px 12px", background: "rgba(167,139,250,0.1)", borderRadius: 6, border: "1px solid rgba(167,139,250,0.3)", fontSize: 11, color: "#a78bfa", fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ fontSize: 14 }}>✓</span> {pattern}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Phase 5: Static Analysis Results */}
                       {analysis.staticAnalysis && analysis.staticAnalysis.algorithms && analysis.staticAnalysis.algorithms.length > 0 && (
                         <div style={styles.card}>
@@ -1592,6 +1686,89 @@ export default function KoderzApp() {
                               <div style={{ fontSize: 11, color: "#e2e8f0", lineHeight: 1.6 }}>{aiAnalysis.insights}</div>
                             </div>
                           )}
+
+                          {/* Phase 7: Suggestion Panel with Code Snippets */}
+                          <div style={{ marginTop: 16, borderTop: "1px solid rgba(148,163,184,0.1)", paddingTop: 12 }}>
+                            <div 
+                              onClick={() => setSuggestionsExpanded(!suggestionsExpanded)}
+                              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: suggestionsExpanded ? 12 : 0 }}
+                            >
+                              <span style={{ fontSize: 18, color: "#eab308" }}>{suggestionsExpanded ? "▼" : "▶"}</span>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", flex: 1 }}>💻 REFACTORING SUGGESTIONS</div>
+                              <span style={styles.badge("#eab308", 8)}>{analysis?.suggestions?.length || 0} tips</span>
+                            </div>
+
+                            {suggestionsExpanded && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+                                {analysis?.suggestions && analysis.suggestions.map((suggestion, idx) => (
+                                  <div key={idx} style={{ marginBottom: 12, padding: 12, background: "rgba(234,179,8,0.05)", borderRadius: 8, border: "1px solid rgba(234,179,8,0.2)" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
+                                      <div style={{ fontSize: 11, color: "#e2e8f0", fontWeight: 500, flex: 1 }}>{suggestion}</div>
+                                      <button 
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(suggestion);
+                                          setCopiedIndex(idx);
+                                          setTimeout(() => setCopiedIndex(null), 2000);
+                                        }}
+                                        style={{ 
+                                          padding: "4px 8px", 
+                                          fontSize: 10, 
+                                          background: copiedIndex === idx ? "#22c55e" : "#eab308", 
+                                          color: copiedIndex === idx ? "#fff" : "#000", 
+                                          border: "none", 
+                                          borderRadius: 4, 
+                                          cursor: "pointer", 
+                                          fontWeight: 600,
+                                          transition: "all 0.3s ease"
+                                        }}
+                                      >
+                                        {copiedIndex === idx ? "✓ Copied" : "Copy"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+
+                                {/* Code Snippet Suggestions */}
+                                {analysis?.staticAnalysis?.algorithms && analysis.staticAnalysis.algorithms.length > 0 && (
+                                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(234,179,8,0.2)" }}>
+                                    <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 10, fontWeight: 600 }}>📋 OPTIMIZED CODE TEMPLATES</div>
+                                    {(() => {
+                                      const snippets = generateOptimizationSnippets(analysis.staticAnalysis.algorithms[0]?.algorithm, editorLanguage);
+                                      return Object.entries(snippets).slice(0, 2).map(([key, snippet]) => (
+                                        <div key={key} style={{ marginBottom: 12, padding: 10, background: "rgba(6,182,212,0.08)", borderRadius: 6, border: "1px solid rgba(6,182,212,0.2)" }}>
+                                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                            <div style={{ fontSize: 10, color: "#06b6d4", fontWeight: 600 }}>{key.replace(/-/g, " ").toUpperCase()}</div>
+                                            <button 
+                                              onClick={() => {
+                                                navigator.clipboard.writeText(snippet);
+                                                setCopiedIndex(`snippet-${key}`);
+                                                setTimeout(() => setCopiedIndex(null), 2000);
+                                              }}
+                                              style={{ 
+                                                padding: "4px 8px", 
+                                                fontSize: 9, 
+                                                background: copiedIndex === `snippet-${key}` ? "#22c55e" : "#06b6d4", 
+                                                color: "#fff", 
+                                                border: "none", 
+                                                borderRadius: 4, 
+                                                cursor: "pointer", 
+                                                fontWeight: 600
+                                              }}
+                                            >
+                                              {copiedIndex === `snippet-${key}` ? "✓ Copied" : "Copy Code"}
+                                            </button>
+                                          </div>
+                                          <div style={{ fontSize: 8, color: "#64748b", fontFamily: "monospace", background: "#020917", padding: 8, borderRadius: 4, overflow: "auto", maxHeight: "120px", lineHeight: 1.4, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                            {snippet}
+                                          </div>
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
+                                )}
+                              </motion.div>
+                            )}
+                          </div>
                         </motion.div>
                       )}
                     </motion.div>
