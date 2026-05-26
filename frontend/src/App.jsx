@@ -1336,28 +1336,77 @@ function KoderzApp() {
 
   const styles = {
     app: { minHeight: "100vh", background: "#0a0f1e", color: "#e2e8f0", fontFamily: "'JetBrains Mono', 'Fira Code', monospace" },
-    nav: { background: "rgba(15,23,42,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(148,163,184,0.08)", padding: "0 24px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, zIndex: 100, height: 56 },
-    navBrand: { fontSize: 18, fontWeight: 900, letterSpacing: "-0.5px", background: "linear-gradient(135deg, #f97316, #eab308)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginRight: 24 },
-    navItem: (active) => ({ padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: active ? 700 : 400, cursor: "pointer", border: "none", background: active ? "rgba(249,115,22,0.15)" : "transparent", color: active ? "#f97316" : "#64748b", transition: "all 0.2s", letterSpacing: "0.5px" }),
-    page: { maxWidth: 1100, margin: "0 auto", padding: "40px 24px" },
-    card: { background: "rgba(15,23,42,0.6)", border: "1px solid rgba(148,163,184,0.1)", borderRadius: 12, padding: 24, backdropFilter: "blur(10px)" },
-    h1: { fontSize: 36, fontWeight: 900, letterSpacing: "-1px", lineHeight: 1.1 },
-    h2: { fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px", marginBottom: 20 },
-    grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 },
-    grid3: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 },
-    badge: (color) => ({ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}44` }),
+    nav: { background: "rgba(15,23,42,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(148,163,184,0.08)", padding: "0 16px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, zIndex: 100, height: 56, overflowX: "auto" },
+    navBrand: { fontSize: 16, fontWeight: 900, letterSpacing: "-0.5px", background: "linear-gradient(135deg, #f97316, #eab308)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginRight: 12, whiteSpace: "nowrap" },
+    navItem: (active) => ({ padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: active ? 700 : 400, cursor: "pointer", border: "none", background: active ? "rgba(249,115,22,0.15)" : "transparent", color: active ? "#f97316" : "#64748b", transition: "all 0.2s", letterSpacing: "0.5px", whiteSpace: "nowrap" }),
+    page: { maxWidth: 1100, margin: "0 auto", padding: "24px 16px" },
+    card: { background: "rgba(15,23,42,0.6)", border: "1px solid rgba(148,163,184,0.1)", borderRadius: 12, padding: 20, backdropFilter: "blur(10px)" },
+    h1: { fontSize: 28, fontWeight: 900, letterSpacing: "-1px", lineHeight: 1.1 },
+    h2: { fontSize: 18, fontWeight: 700, letterSpacing: "-0.5px", marginBottom: 16 },
+    grid2: { display: "grid", gridTemplateColumns: "1fr", gap: 16 },
+    grid3: { display: "grid", gridTemplateColumns: "1fr", gap: 12 },
+    badge: (color) => ({ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}44` }),
     btn: (variant = "primary") => ({
-      padding: "10px 20px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 12, letterSpacing: "0.5px", transition: "all 0.2s",
+      padding: "10px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 11, letterSpacing: "0.5px", transition: "all 0.2s", minHeight: "44px", minWidth: "44px", touchAction: "manipulation",
       ...(variant === "primary" ? { background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff" } : {}),
       ...(variant === "outline" ? { background: "transparent", color: "#64748b", border: "1px solid rgba(148,163,184,0.2)" } : {}),
       ...(variant === "ghost" ? { background: "rgba(148,163,184,0.08)", color: "#94a3b8" } : {}),
     }),
   };
 
+  // Responsive grid helper
+  const [windowWidth, setWindowWidth] = React.useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handleResize, { passive: true });
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const responsiveGrid2 = {
+    display: "grid",
+    gridTemplateColumns: windowWidth > 768 ? "1fr 1fr" : "1fr",
+    gap: 16,
+  };
+
+  const responsiveGrid3 = {
+    display: "grid",
+    gridTemplateColumns: windowWidth > 1024 ? "repeat(3, 1fr)" : windowWidth > 640 ? "1fr 1fr" : "1fr",
+    gap: windowWidth > 640 ? 16 : 12,
+  };
+
   return (
     <div style={styles.app}>
-      {/* Google Font */}
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800;900&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0a0f1e; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }`}</style>
+      {/* Google Font & Responsive CSS */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0f1e; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        
+        /* Mobile First (Mobile < 640px) */
+        body { font-size: 14px; }
+        
+        /* Tablet (640px - 1024px) */
+        @media (min-width: 640px) {
+          body { font-size: 15px; }
+        }
+        
+        /* Desktop (> 1024px) */
+        @media (min-width: 1024px) {
+          body { font-size: 16px; }
+        }
+        
+        /* Prevent zoom on input focus (iOS) */
+        input, select, textarea, button {
+          font-size: 16px !important;
+        }
+        
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+          button, a { padding: 12px 16px; }
+        }
+      `}</style>
 
       {/* Nav */}
       <nav style={styles.nav}>
@@ -1388,7 +1437,7 @@ function KoderzApp() {
                 </motion.div>
               </div>
 
-              <div style={styles.grid3}>
+              <div style={responsiveGrid3}>
                 {[
                   { icon: "◈", title: "Learn", desc: "Deep-dive into 6 algorithms with complexity tables, code, and step-by-step breakdowns.", page: "learn", color: "#f97316" },
                   { icon: "◉", title: "Visualize", desc: "Watch algorithms sort your data live with color-coded animations and step explanations.", page: "visualize", color: "#22c55e" },
@@ -1567,7 +1616,7 @@ function KoderzApp() {
                 <span style={{ fontSize: 18, color: "#475569", marginTop: 20 }}>vs</span>
               </div>
 
-              <div style={styles.grid2}>
+              <div style={responsiveGrid2}>
                 {[compareA, compareB].map(slug => {
                   const algo = ALGORITHMS[slug];
                   return (
