@@ -1397,6 +1397,28 @@ function KoderzApp() {
           body { font-size: 16px; }
         }
         
+        /* Accessibility: Focus states for keyboard navigation */
+        button:focus, a:focus, select:focus, textarea:focus, input:focus {
+          outline: 2px solid #f97316;
+          outline-offset: 2px;
+        }
+        
+        /* Focus visible for modern browsers */
+        button:focus-visible, a:focus-visible, select:focus-visible {
+          outline: 2px solid #f97316;
+          outline-offset: 2px;
+        }
+        
+        /* High contrast mode support */
+        @media (prefers-contrast: more) {
+          button, a, select { border-width: 2px; }
+        }
+        
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+        }
+        
         /* Prevent zoom on input focus (iOS) */
         input, select, textarea, button {
           font-size: 16px !important;
@@ -1406,14 +1428,41 @@ function KoderzApp() {
         @media (hover: none) and (pointer: coarse) {
           button, a { padding: 12px 16px; }
         }
+        
+        /* Screen reader text */
+        .sr-only {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          white-space: nowrap;
+          border-width: 0;
+        }
       `}</style>
 
       {/* Nav */}
-      <nav style={styles.nav}>
-        <span style={styles.navBrand}>⬡ KODERZ</span>
+      <nav style={styles.nav} role="navigation" aria-label="Main navigation">
+        <span style={styles.navBrand} aria-label="Koderz - Algorithm Learning Platform">⬡ KODERZ</span>
         {navItems.map(n => (
-          <button key={n.id} onClick={() => setPage(n.id)} style={styles.navItem(page === n.id)}>
-            {n.icon} {n.label}
+          <button 
+            key={n.id} 
+            onClick={() => setPage(n.id)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                e.preventDefault();
+                const index = navItems.findIndex(item => item.id === n.id);
+                const nextIndex = e.key === "ArrowRight" ? (index + 1) % navItems.length : (index - 1 + navItems.length) % navItems.length;
+                setPage(navItems[nextIndex].id);
+              }
+            }}
+            style={styles.navItem(page === n.id)}
+            aria-current={page === n.id ? "page" : undefined}
+            aria-label={`Navigate to ${n.label}`}
+            title={n.label}>
+            <span aria-hidden="true">{n.icon}</span> <span className="sr-only">{n.label}</span> <span aria-hidden="true" style={{ display: "inline" }}>{n.label}</span>
           </button>
         ))}
       </nav>
@@ -1430,9 +1479,23 @@ function KoderzApp() {
                   <h1 style={{ ...styles.h1, fontSize: 52, background: "linear-gradient(135deg, #f97316, #eab308, #22c55e)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>KODERZ</h1>
                   <p style={{ fontSize: 18, color: "#64748b", marginTop: 12, marginBottom: 8, letterSpacing: "0.5px" }}>Algorithm Learning · Visualization · Complexity Analysis</p>
                   <p style={{ fontSize: 13, color: "#475569", maxWidth: 480, margin: "0 auto 40px" }}>An interactive DSA platform for developers who think deeply about performance.</p>
-                  <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-                    <button onClick={() => setPage("learn")} style={styles.btn("primary")}>◈ Explore Algorithms</button>
-                    <button onClick={() => setPage("analyze")} style={styles.btn("ghost")}>◎ Analyze Code</button>
+                  <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+                    <button 
+                      onClick={() => setPage("learn")} 
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPage("learn"); } }}
+                      style={styles.btn("primary")}
+                      aria-label="Explore algorithm library"
+                      title="Learn algorithms">
+                      <span aria-hidden="true">◈</span> Explore Algorithms
+                    </button>
+                    <button 
+                      onClick={() => setPage("analyze")} 
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPage("analyze"); } }}
+                      style={styles.btn("ghost")}
+                      aria-label="Analyze code complexity"
+                      title="Analyze code">
+                      <span aria-hidden="true">◎</span> Analyze Code
+                    </button>
                   </div>
                 </motion.div>
               </div>
@@ -1448,8 +1511,13 @@ function KoderzApp() {
                 ].map((f, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
                     onClick={() => f.page && setPage(f.page)}
-                    style={{ ...styles.card, cursor: f.page ? "pointer" : "default", borderColor: `${f.color}22`, transition: "border-color 0.2s" }}>
-                    <div style={{ fontSize: 24, color: f.color, marginBottom: 10 }}>{f.icon}</div>
+                    onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && f.page) { e.preventDefault(); setPage(f.page); } }}
+                    role={f.page ? "button" : "article"}
+                    tabIndex={f.page ? 0 : -1}
+                    style={{ ...styles.card, cursor: f.page ? "pointer" : "default", borderColor: `${f.color}22`, transition: "border-color 0.2s" }}
+                    aria-label={`${f.title}: ${f.desc}`}
+                    title={f.page ? `Navigate to ${f.title}` : f.title}>
+                    <div style={{ fontSize: 24, color: f.color, marginBottom: 10 }} aria-hidden="true">{f.icon}</div>
                     <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{f.title}</div>
                     <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>{f.desc}</div>
                   </motion.div>
@@ -1654,8 +1722,13 @@ function KoderzApp() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 20 }}>
                 <div style={styles.card}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>CODE EDITOR</div>
-                    <select value={editorLanguage} onChange={e => setEditorLanguage(e.target.value)}
+                    <label style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }} htmlFor="language-select">CODE EDITOR</label>
+                    <select 
+                      id="language-select"
+                      value={editorLanguage} 
+                      onChange={e => setEditorLanguage(e.target.value)}
+                      aria-label="Select programming language"
+                      title="Select the programming language for the code editor"
                       style={{ background: "#0f172a", color: "#e2e8f0", border: "1px solid rgba(148,163,184,0.2)", borderRadius: 6, padding: "6px 10px", fontFamily: "inherit", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>
                       <option value="python">Python</option>
                       <option value="java">Java</option>
@@ -1740,11 +1813,24 @@ function KoderzApp() {
                       />
                     </Suspense>
                   </div>
-                  <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                    <button onClick={handleAnalyze} disabled={analyzing} style={styles.btn("primary")}>
+                  <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+                    <button 
+                      onClick={handleAnalyze} 
+                      onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && !analyzing) { e.preventDefault(); handleAnalyze(); } }}
+                      disabled={analyzing} 
+                      style={styles.btn("primary")}
+                      aria-label={analyzing ? "Analyzing code complexity" : "Analyze code complexity"}
+                      title="Analyze the code for time/space complexity">
                       {analyzing ? "⟳ Analyzing..." : "◎ Analyze Complexity"}
                     </button>
-                    <button onClick={() => { setCode(""); setAnalysis(null); }} style={styles.btn("outline")}>Clear</button>
+                    <button 
+                      onClick={() => { setCode(""); setAnalysis(null); }}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCode(""); setAnalysis(null); } }}
+                      style={styles.btn("outline")}
+                      aria-label="Clear code editor"
+                      title="Clear the code editor">
+                      Clear
+                    </button>
                   </div>
 
                   <div style={{ marginTop: 20, borderTop: "1px solid rgba(148,163,184,0.08)", paddingTop: 16 }}>
