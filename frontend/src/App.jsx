@@ -1139,7 +1139,7 @@ function VisualizerBar({ value, max, state, height = 180 }) {
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
-export default function KoderzApp() {
+function KoderzApp() {
   const [page, setPage] = useState("home");
   const [selectedAlgo, setSelectedAlgo] = useState("bubble");
   const [compareA, setCompareA] = useState("bubble");
@@ -1974,5 +1974,14 @@ export default function KoderzApp() {
         </motion.div>
       </AnimatePresence>
     </div>
+  );
+}
+
+// Wrap with Error Boundary for production resilience
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <KoderzApp />
+    </ErrorBoundary>
   );
 }
