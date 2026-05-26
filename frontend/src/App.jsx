@@ -1,7 +1,86 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, lazy, Suspense, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Editor from "@monaco-editor/react";
+const Editor = lazy(() => import("@monaco-editor/react"));
 import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// ─── Error Boundary Component ──────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  
+  componentDidCatch(error, errorInfo) {
+    console.error("Error caught by boundary:", error, errorInfo);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ background: "#1e1b4b", color: "#fff", padding: "20px", borderRadius: "8px", margin: "20px", minHeight: "200px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+          <div style={{ fontSize: "18px", marginBottom: "10px", color: "#fca5a5" }}>⚠️ Something went wrong</div>
+          <div style={{ fontSize: "12px", color: "#cbd5e1", marginBottom: "15px", textAlign: "center", maxWidth: "400px" }}>{this.state.error?.message}</div>
+          <button onClick={() => location.reload()} style={{ background: "#4f46e5", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "4px", cursor: "pointer", fontSize: "12px" }}>Reload Page</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── Loading Spinner Component ─────────────────────────────────────────────────
+function LoadingSpinner({ text = "Loading..." }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+        color: "#94a3b8"
+      }}
+    >
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+        style={{
+          width: "32px",
+          height: "32px",
+          border: "3px solid #334155",
+          borderTop: "3px solid #4f46e5",
+          borderRadius: "50%",
+          marginBottom: "12px"
+        }}
+      />
+      <div style={{ fontSize: "12px" }}>{text}</div>
+    </motion.div>
+  );
+}
+
+// ─── Editor Fallback Component ─────────────────────────────────────────────────
+function EditorFallback() {
+  return (
+    <div style={{
+      width: "100%",
+      height: "400px",
+      background: "#0f172a",
+      border: "1px solid #334155",
+      borderRadius: "6px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }}>
+      <LoadingSpinner text="Editor loading..." />
+    </div>
+  );
+}
 
 // ─── Theme & Constants ────────────────────────────────────────────────────────
 const ALGORITHMS = {
@@ -1101,7 +1180,42 @@ export default function KoderzApp() {
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [suggestionsExpanded, setSuggestionsExpanded] = useState(true);
   const [copiedIndex, setCopiedIndex] = useState(null);
+  const [editorReady, setEditorReady] = useState(false);
+  const [codeError, setCodeError] = useState(null);
+  const [apiDisabled, setApiDisabled] = useState(!process.env.REACT_APP_GEMINI_API_KEY);
   const debounceTimer = useRef(null);
+
+  // ─── Check API Key on Mount ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!process.env.REACT_APP_GEMINI_API_KEY) {
+      console.warn("⚠️ AI features disabled: REACT_APP_GEMINI_API_KEY not configured");
+      setApiDisabled(true);
+    }
+  }, []);
+
+  // ─── Memoized AST Analysis ────────────────────────────────────────────────
+  const astData = useMemo(() => {
+    if (!code || !code.trim()) return { empty: true };
+    try {
+      setCodeError(null);
+      return parseCode(code, editorLanguage);
+    } catch (err) {
+      console.error("Parse error:", err);
+      setCodeError("Unable to parse code - check syntax");
+      return { error: true, message: err.message };
+    }
+  }, [code, editorLanguage]);
+
+  // ─── Memoized Static Analysis ─────────────────────────────────────────────
+  const staticAnalysisResult = useMemo(() => {
+    if (!astData || astData.empty || astData.error) return null;
+    try {
+      return staticAnalysis(astData);
+    } catch (err) {
+      console.error("Static analysis error:", err);
+      return null;
+    }
+  }, [astData]);
 
   const currentStep = vizSteps[vizStep] || null;
   const maxVal = vizArray.length ? Math.max(...vizArray) : 1;
@@ -1142,15 +1256,34 @@ export default function KoderzApp() {
   const displayArr = currentStep ? currentStep.array : vizArray;
 
   const handleAnalyze = () => {
+    // Check for empty code
+    if (!code || !code.trim()) {
+      setCodeError("Enter code to analyze");
+      return;
+    }
+
     setAnalyzing(true);
     setTimeout(() => {
-      // Phase 4: Pass language to enable language-specific AST parsing
-      const result = analyzeCode(code, editorLanguage);
-      setAnalysis(result);
+      try {
+        // Use memoized AST and static analysis
+        const result = {
+          ast: astData,
+          staticAnalysis: staticAnalysisResult,
+          language: editorLanguage,
+          confidence: staticAnalysisResult?.confidence || 0
+        };
+        setAnalysis(result);
+        setCodeError(null);
+        
+        // Phase 6: Trigger debounced AI analysis (only if API enabled)
+        if (!apiDisabled) {
+          triggerAIAnalysis(result);
+        }
+      } catch (err) {
+        console.error("Analysis error:", err);
+        setCodeError("Analysis failed - please check your code");
+      }
       setAnalyzing(false);
-      
-      // Phase 6: Trigger debounced AI analysis
-      triggerAIAnalysis(result);
     }, 900);
   };
 
@@ -1159,13 +1292,29 @@ export default function KoderzApp() {
     // Clear existing timer
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     
+    // Skip if API is disabled
+    if (apiDisabled || !process.env.REACT_APP_GEMINI_API_KEY) {
+      console.info("AI analysis skipped: API key not configured");
+      return;
+    }
+
     setAiAnalyzing(true);
     debounceTimer.current = setTimeout(async () => {
       try {
-        const aiResult = await analyzeWithAI(code, editorLanguage, analysisResult.staticAnalysis, analysisResult.ast);
-        setAiAnalysis(aiResult);
+        const aiResult = await analyzeWithAI(
+          code,
+          editorLanguage,
+          analysisResult?.staticAnalysis,
+          analysisResult?.ast
+        );
+        setAiAnalysis(aiResult ?? { error: "No response", confidence: 0 });
       } catch (e) {
-        setAiAnalysis({ error: "AI analysis failed", confidence: 0 });
+        console.error("AI analysis error:", e);
+        setAiAnalysis({ 
+          error: "AI analysis failed", 
+          confidence: 0,
+          message: e?.message || "Network error or API unavailable"
+        });
       }
       setAiAnalyzing(false);
     }, 2500); // 2.5 second debounce
@@ -1459,45 +1608,82 @@ export default function KoderzApp() {
                       <option value="c">C</option>
                     </select>
                   </div>
-                  <div style={{ background: "#020917", borderRadius: 8, border: "1px solid rgba(148,163,184,0.1)", overflow: "hidden" }}>
-                    <Editor
-                      height="340px"
-                      language={editorLanguage}
-                      value={code}
-                      onChange={(value) => {
-                        setCode(value || "");
-                        // Phase 6: Trigger debounced AI analysis on every keystroke
-                        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-                        setAiAnalyzing(true);
-                        debounceTimer.current = setTimeout(async () => {
-                          try {
-                            const result = analyzeCode(value || "", editorLanguage);
-                            const aiResult = await analyzeWithAI(value || "", editorLanguage, result.staticAnalysis, result.ast);
-                            setAiAnalysis(aiResult);
-                          } catch (e) {
-                            setAiAnalysis({ error: "AI analysis failed" });
+                  
+                  {/* Display code error if parsing failed */}
+                  {codeError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{ background: "rgba(220,38,38,0.1)", border: "1px solid #dc2626", borderRadius: 4, padding: 8, marginBottom: 12, fontSize: 11, color: "#fca5a5" }}
+                    >
+                      ⚠️ {codeError}
+                    </motion.div>
+                  )}
+
+                  {/* API disabled warning */}
+                  {apiDisabled && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{ background: "rgba(59,130,246,0.1)", border: "1px solid #3b82f6", borderRadius: 4, padding: 8, marginBottom: 12, fontSize: 10, color: "#93c5fd" }}
+                    >
+                      ℹ️ AI features disabled (set REACT_APP_GEMINI_API_KEY in .env.local)
+                    </motion.div>
+                  )}
+
+                  <div style={{ background: "#020917", borderRadius: 8, border: "1px solid rgba(148,163,184,0.1)", overflow: "hidden", position: "relative" }}>
+                    <Suspense fallback={<EditorFallback />}>
+                      <Editor
+                        height="340px"
+                        language={editorLanguage}
+                        value={code}
+                        onChange={(value) => {
+                          setCode(value || "");
+                          setEditorReady(true);
+                          
+                          // Phase 6: Trigger debounced AI analysis on every keystroke
+                          if (debounceTimer.current) clearTimeout(debounceTimer.current);
+                          
+                          // Only trigger AI if code is not empty and API is enabled
+                          if ((value || "").trim() && !apiDisabled) {
+                            setAiAnalyzing(true);
+                            debounceTimer.current = setTimeout(async () => {
+                              try {
+                                const aiResult = await analyzeWithAI(
+                                  value || "",
+                                  editorLanguage,
+                                  staticAnalysisResult,
+                                  astData
+                                );
+                                setAiAnalysis(aiResult ?? { error: "No response" });
+                              } catch (e) {
+                                console.error("AI analysis error:", e);
+                                setAiAnalysis({ error: "AI analysis failed", message: e?.message });
+                              }
+                              setAiAnalyzing(false);
+                            }, 2500); // 2.5 second debounce
                           }
-                          setAiAnalyzing(false);
-                        }, 2500); // 2.5 second debounce
-                      }}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 13,
-                        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                        lineNumbers: "on",
-                        scrollBeyondLastLine: false,
-                        automaticLayout: true,
-                        wordWrap: "on",
-                        formatOnPaste: true,
-                        formatOnType: true,
-                        tabSize: 4,
-                        insertSpaces: true,
-                        renderWhitespace: "selection",
-                        smoothScrolling: true,
-                        cursorBlinking: "blink",
-                      }}
-                    />
+                        }}
+                        theme="vs-dark"
+                        onMount={() => setEditorReady(true)}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 13,
+                          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                          lineNumbers: "on",
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                          wordWrap: "on",
+                          formatOnPaste: true,
+                          formatOnType: true,
+                          tabSize: 4,
+                          insertSpaces: true,
+                          renderWhitespace: "selection",
+                          smoothScrolling: true,
+                          cursorBlinking: "blink",
+                        }}
+                      />
+                    </Suspense>
                   </div>
                   <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
                     <button onClick={handleAnalyze} disabled={analyzing} style={styles.btn("primary")}>
