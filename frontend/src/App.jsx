@@ -1262,6 +1262,12 @@ function KoderzApp() {
       return;
     }
 
+    // Check for code size limit (50,000 characters)
+    if (code.length > 50000) {
+      setCodeError("Code too large (max 50,000 characters)");
+      return;
+    }
+
     setAnalyzing(true);
     setTimeout(() => {
       try {
@@ -1720,7 +1726,10 @@ function KoderzApp() {
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                       <div style={{ ...styles.card, borderTop: "3px solid #f97316", marginBottom: 16 }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-                          {[["Time Complexity", analysis.timeComplexity, "#f97316"], ["Space Complexity", analysis.spaceComplexity, "#3b82f6"]].map(([l, v, c]) => (
+                          {[
+                            ["Time Complexity", analysis?.timeComplexity || "N/A", "#f97316"],
+                            ["Space Complexity", analysis?.spaceComplexity || "N/A", "#3b82f6"]
+                          ].map(([l, v, c]) => (
                             <div key={l} style={{ textAlign: "center", padding: 20, background: `${c}11`, borderRadius: 10, border: `1px solid ${c}33` }}>
                               <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>{l.toUpperCase()}</div>
                               <div style={{ fontSize: 28, fontWeight: 900, color: c }}>{v}</div>
@@ -1728,16 +1737,16 @@ function KoderzApp() {
                           ))}
                         </div>
                         <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.7, marginBottom: 16, padding: "12px 14px", background: "rgba(148,163,184,0.04)", borderRadius: 8 }}>
-                          {analysis.explanation}
+                          {analysis?.explanation || "Code structure analysis complete"}
                         </div>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          {analysis.detectedPatterns.map(p => <span key={p} style={styles.badge("#a855f7")}>{p}</span>)}
-                          {analysis.recursion && <span style={styles.badge("#06b6d4")}>Recursive</span>}
-                          {analysis.loops > 0 && <span style={styles.badge("#eab308")}>{analysis.loops} Loop(s)</span>}
-                          <span style={styles.badge("#22c55e", 10)}>Conf: {analysis.confidence}%</span>
+                          {(analysis?.detectedPatterns || []).map(p => <span key={p} style={styles.badge("#a855f7")}>{p}</span>)}
+                          {analysis?.recursion && <span style={styles.badge("#06b6d4")}>Recursive</span>}
+                          {(analysis?.loops || 0) > 0 && <span style={styles.badge("#eab308")}>{analysis.loops} Loop(s)</span>}
+                          <span style={styles.badge("#22c55e", 10)}>Conf: {analysis?.confidence ?? 0}%</span>
                         </div>
                         
-                        {analysis.parsingStatus && (
+                        {analysis?.parsingStatus && (
                           <div style={{ fontSize: 11, color: "#64748b", marginTop: 12, padding: "8px 12px", background: "rgba(34,197,94,0.08)", borderRadius: 6, borderLeft: "2px solid #22c55e" }}>
                             {analysis.parsingStatus}
                           </div>
@@ -1745,28 +1754,26 @@ function KoderzApp() {
                       </div>
 
                       {/* Phase 7: Pattern Detection Highlights */}
-                      {analysis.detectedPatterns && analysis.detectedPatterns.length > 0 && (
+                      {(analysis?.detectedPatterns || []).length > 0 && (
                         <div style={styles.card}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 12 }}>🎯 CODE PATTERNS DETECTED</div>
-                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                            {analysis.detectedPatterns.map((pattern, i) => (
-                              <div key={i} style={{ padding: "6px 12px", background: "rgba(167,139,250,0.1)", borderRadius: 6, border: "1px solid rgba(167,139,250,0.3)", fontSize: 11, color: "#a78bfa", fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>
-                                <span style={{ fontSize: 14 }}>✓</span> {pattern}
-                              </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                            {analysis.detectedPatterns.map((p, i) => (
+                              <span key={i} style={{ ...styles.badge("#a855f7"), padding: "6px 12px" }}>✓ {p}</span>
                             ))}
                           </div>
                         </div>
                       )}
 
                       {/* Phase 5: Static Analysis Results */}
-                      {analysis.staticAnalysis && analysis.staticAnalysis.algorithms && analysis.staticAnalysis.algorithms.length > 0 && (
+                      {(analysis?.staticAnalysis?.algorithms || []).length > 0 && (
                         <div style={styles.card}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 14 }}>🔍 DETECTED ALGORITHMS</div>
                           {analysis.staticAnalysis.algorithms.map((algo, i) => (
                             <div key={i} style={{ marginBottom: 14, padding: 12, background: "#020917", borderRadius: 8, border: "1px solid rgba(136,136,136,0.15)" }}>
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
                                 <div style={{ fontSize: 12, fontWeight: 700, color: "#06b6d4" }}>{algo.algorithm}</div>
-                                <span style={styles.badge("#06b6d4", 8)}>Conf: {algo.confidence}%</span>
+                                <span style={styles.badge("#06b6d4", 8)}>Conf: {algo?.confidence ?? 0}%</span>
                               </div>
                               <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.5, marginBottom: 8 }}>{algo.description}</div>
                               <div style={{ display: "flex", gap: 16, fontSize: 10, color: "#64748b" }}>
@@ -1782,11 +1789,11 @@ function KoderzApp() {
                       )}
 
                       {/* Code Smell Detection */}
-                      {analysis.staticAnalysis && analysis.staticAnalysis.smells && analysis.staticAnalysis.smells.length > 0 && (
+                      {(analysis?.staticAnalysis?.smells || []).length > 0 && (
                         <div style={styles.card}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 14 }}>⚠️ CODE SMELLS</div>
                           {analysis.staticAnalysis.smells.map((smell, i) => (
-                            <div key={i} style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.6, padding: "10px 0", borderBottom: i < analysis.staticAnalysis.smells.length - 1 ? "1px solid rgba(148,163,184,0.06)" : "none", display: "flex", gap: 10, alignItems: "flex-start" }}>
+                            <div key={i} style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.6, padding: "10px 0", borderBottom: i < (analysis.staticAnalysis?.smells?.length || 0) - 1 ? "1px solid rgba(148,163,184,0.06)" : "none", display: "flex", gap: 10, alignItems: "flex-start" }}>
                               <span style={{ color: smell.severity === "high" ? "#f97316" : "#eab308", flexShrink: 0, marginTop: 2 }}>●</span>
                               <div>
                                 <div style={{ fontWeight: 600, color: "#e2e8f0" }}>{smell.smell}</div>
@@ -1797,11 +1804,11 @@ function KoderzApp() {
                         </div>
                       )}
 
-                      {analysis.suggestions.length > 0 && (
+                      {(analysis?.suggestions || []).length > 0 && (
                         <div style={styles.card}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 14 }}>⚡ OPTIMIZATION TIPS</div>
                           {analysis.suggestions.map((s, i) => (
-                            <div key={i} style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6, padding: "10px 0", borderBottom: i < analysis.suggestions.length - 1 ? "1px solid rgba(148,163,184,0.06)" : "none", display: "flex", gap: 10 }}>
+                            <div key={i} style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6, padding: "10px 0", borderBottom: i < (analysis?.suggestions?.length || 0) - 1 ? "1px solid rgba(148,163,184,0.06)" : "none", display: "flex", gap: 10 }}>
                               <span style={{ color: "#22c55e", flexShrink: 0 }}>→</span>{s}
                             </div>
                           ))}
@@ -1837,7 +1844,7 @@ function KoderzApp() {
                             </div>
                           )}
 
-                          {aiAnalysis.isComplete === false && aiAnalysis.missingLogic && aiAnalysis.missingLogic.length > 0 && (
+                          {aiAnalysis?.isComplete === false && (aiAnalysis?.missingLogic || []).length > 0 && (
                             <div style={{ marginBottom: 14, padding: 12, background: "rgba(249,115,22,0.08)", borderLeft: "3px solid #f97316", borderRadius: 6 }}>
                               <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>⚠️ INCOMPLETE - MISSING LOGIC</div>
                               {aiAnalysis.missingLogic.map((logic, i) => (
@@ -1846,15 +1853,15 @@ function KoderzApp() {
                             </div>
                           )}
 
-                          {aiAnalysis.timeComplexity && (
+                          {aiAnalysis?.timeComplexity && (
                             <div style={{ marginBottom: 14, padding: 12, background: "rgba(34,197,94,0.08)", borderLeft: "3px solid #22c55e", borderRadius: 6 }}>
                               <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>COMPLEXITY ANALYSIS</div>
                               <div style={{ fontSize: 12, color: "#22c55e", fontWeight: 600, marginBottom: 6 }}>{aiAnalysis.timeComplexity}</div>
-                              {aiAnalysis.explanation && <div style={{ fontSize: 10, color: "#64748b", lineHeight: 1.5 }}>{aiAnalysis.explanation}</div>}
+                              {aiAnalysis?.explanation && <div style={{ fontSize: 10, color: "#64748b", lineHeight: 1.5 }}>{aiAnalysis.explanation}</div>}
                             </div>
                           )}
 
-                          {aiAnalysis.optimizations && aiAnalysis.optimizations.length > 0 && (
+                          {(aiAnalysis?.optimizations || []).length > 0 && (
                             <div style={{ marginBottom: 14, padding: 12, background: "rgba(234,179,8,0.08)", borderLeft: "3px solid #eab308", borderRadius: 6 }}>
                               <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>💡 AI OPTIMIZATION SUGGESTIONS</div>
                               {aiAnalysis.optimizations.map((opt, i) => (
@@ -1866,7 +1873,7 @@ function KoderzApp() {
                             </div>
                           )}
 
-                          {aiAnalysis.insights && (
+                          {aiAnalysis?.insights && (
                             <div style={{ padding: 12, background: "rgba(236,72,153,0.08)", borderLeft: "3px solid #ec4899", borderRadius: 6 }}>
                               <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 8 }}>📚 LEARNING INSIGHTS</div>
                               <div style={{ fontSize: 11, color: "#e2e8f0", lineHeight: 1.6 }}>{aiAnalysis.insights}</div>
