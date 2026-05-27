@@ -1417,6 +1417,12 @@ function KoderzApp() {
     gap: windowWidth > 640 ? 16 : 12,
   };
 
+  useEffect(() => {
+    if (windowWidth > 640 && menuOpen) {
+      setMenuOpen(false);
+    }
+  }, [windowWidth, menuOpen]);
+
   return (
     <div style={styles.app}>
       {/* Google Font & Responsive CSS */}
@@ -1489,26 +1495,55 @@ function KoderzApp() {
       {/* Nav */}
       <nav style={styles.nav} role="navigation" aria-label="Main navigation">
         <span style={styles.navBrand} aria-label="Koderz - Algorithm Learning Platform">⬡ KODERZ</span>
-        {navItems.map(n => (
-          <button 
-            key={n.id} 
-            onClick={() => setPage(n.id)}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                e.preventDefault();
-                const index = navItems.findIndex(item => item.id === n.id);
-                const nextIndex = e.key === "ArrowRight" ? (index + 1) % navItems.length : (index - 1 + navItems.length) % navItems.length;
-                setPage(navItems[nextIndex].id);
-              }
-            }}
-            style={styles.navItem(page === n.id)}
-            aria-current={page === n.id ? "page" : undefined}
-            aria-label={`Navigate to ${n.label}`}
-            title={n.label}>
-            <span aria-hidden="true">{n.icon}</span> <span className="sr-only">{n.label}</span> <span aria-hidden="true" style={{ display: "inline" }}>{n.label}</span>
-          </button>
-        ))}
+        <div style={styles.navMenuDesktop}>
+          {navItems.map(n => (
+            <button 
+              key={n.id} 
+              onClick={() => setPage(n.id)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  const index = navItems.findIndex(item => item.id === n.id);
+                  const nextIndex = e.key === "ArrowRight" ? (index + 1) % navItems.length : (index - 1 + navItems.length) % navItems.length;
+                  setPage(navItems[nextIndex].id);
+                }
+              }}
+              style={styles.navItem(page === n.id)}
+              aria-current={page === n.id ? "page" : undefined}
+              aria-label={`Navigate to ${n.label}`}
+              title={n.label}>
+              <span aria-hidden="true">{n.icon}</span> <span className="sr-only">{n.label}</span> <span aria-hidden="true" style={{ display: "inline" }}>{n.label}</span>
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setMenuOpen(prev => !prev)}
+          aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={menuOpen}
+          style={styles.hamburger}
+        >
+          <span style={{ ...styles.hamburgerLine, transform: menuOpen ? "rotate(45deg) translate(5px, 5px)" : "none" }} />
+          <span style={{ ...styles.hamburgerLine, opacity: menuOpen ? 0 : 1, transform: menuOpen ? "translateX(20px)" : "none" }} />
+          <span style={{ ...styles.hamburgerLine, transform: menuOpen ? "rotate(-45deg) translate(5px, -5px)" : "none" }} />
+        </button>
       </nav>
+      {windowWidth <= 640 && menuOpen && (
+        <div style={styles.navMenuMobile} role="menu" aria-label="Mobile navigation menu">
+          {navItems.map(n => (
+            <button
+              key={n.id}
+              onClick={() => { setPage(n.id); setMenuOpen(false); }}
+              style={styles.navMobileItem(page === n.id)}
+              aria-current={page === n.id ? "page" : undefined}
+              aria-label={`Navigate to ${n.label}`}
+              role="menuitem"
+            >
+              <span aria-hidden="true" style={{ marginRight: 8 }}>{n.icon}</span>
+              {n.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div key={page} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.25 }}>
@@ -1585,7 +1620,7 @@ function KoderzApp() {
               {(() => {
                 const algo = ALGORITHMS[selectedAlgo];
                 return (
-                  <motion.div key={selectedAlgo} initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                  <motion.div key={selectedAlgo} initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.grid2}>
                     <div>
                       <div style={{ ...styles.card, borderLeft: `3px solid ${algo.color}`, marginBottom: 16 }}>
                         <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
@@ -1601,7 +1636,7 @@ function KoderzApp() {
 
                       <div style={styles.card}>
                         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14, color: "#64748b" }}>TIME COMPLEXITY</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: windowWidth > 640 ? "1fr 1fr 1fr" : "1fr", gap: 12 }}>
                           {[["Best", algo.time.best, "#22c55e"], ["Average", algo.time.avg, "#eab308"], ["Worst", algo.time.worst, "#ef4444"]].map(([l, v, c]) => (
                             <div key={l} style={{ textAlign: "center", padding: "14px 8px", background: `${c}11`, borderRadius: 8, border: `1px solid ${c}33` }}>
                               <div style={{ fontSize: 10, color: "#64748b", marginBottom: 6 }}>{l.toUpperCase()}</div>
@@ -1643,7 +1678,7 @@ function KoderzApp() {
           {page === "visualize" && (
             <div style={styles.page}>
               <h2 style={styles.h2}>◉ Algorithm Visualizer</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: windowWidth > 768 ? "280px 1fr" : "1fr", gap: 20 }}>
                 <div>
                   <div style={styles.card}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 14 }}>SELECT ALGORITHM</div>
@@ -1762,7 +1797,7 @@ function KoderzApp() {
           {page === "analyze" && (
             <div style={styles.page}>
               <h2 style={styles.h2}>◎ Code Complexity Analyzer</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 20 }}>
+              <div style={{ display: "grid", gridTemplateColumns: windowWidth > 1024 ? "1fr 420px" : "1fr", gap: 20 }}>
                 <div style={styles.card}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                     <label style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }} htmlFor="language-select">CODE EDITOR</label>
@@ -1903,7 +1938,7 @@ function KoderzApp() {
                   {analysis && !analyzing && (
                     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
                       <div style={{ ...styles.card, borderTop: "3px solid #f97316", marginBottom: 16 }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                        <div style={{ display: "grid", gridTemplateColumns: windowWidth > 640 ? "1fr 1fr" : "1fr", gap: 16, marginBottom: 20 }}>
                           {[
                             ["Time Complexity", analysis?.timeComplexity || "N/A", "#f97316"],
                             ["Space Complexity", analysis?.spaceComplexity || "N/A", "#3b82f6"]
