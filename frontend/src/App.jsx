@@ -1183,6 +1183,7 @@ function KoderzApp() {
   const [editorReady, setEditorReady] = useState(false);
   const [codeError, setCodeError] = useState(null);
   const [apiDisabled, setApiDisabled] = useState(!process.env.REACT_APP_GEMINI_API_KEY);
+  const [menuOpen, setMenuOpen] = useState(false);
   const debounceTimer = useRef(null);
 
   // ─── Check API Key on Mount ────────────────────────────────────────────────
@@ -1373,18 +1374,23 @@ function KoderzApp() {
 
   const styles = {
     app: { minHeight: "100vh", background: "#0a0f1e", color: "#e2e8f0", fontFamily: "'JetBrains Mono', 'Fira Code', monospace" },
-    nav: { background: "rgba(15,23,42,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(148,163,184,0.08)", padding: "0 16px", display: "flex", alignItems: "center", gap: 8, position: "sticky", top: 0, zIndex: 100, height: 56, overflowX: "auto" },
-    navBrand: { fontSize: 16, fontWeight: 900, letterSpacing: "-0.5px", background: "linear-gradient(135deg, #f97316, #eab308)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginRight: 12, whiteSpace: "nowrap" },
+    nav: { background: "rgba(15,23,42,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(148,163,184,0.08)", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, height: 56 },
+    navBrand: { fontSize: 16, fontWeight: 900, letterSpacing: "-0.5px", background: "linear-gradient(135deg, #f97316, #eab308)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", whiteSpace: "nowrap" },
+    navMenuDesktop: { display: windowWidth > 640 ? "flex" : "none", gap: 8, alignItems: "center" },
+    navMenuMobile: { display: windowWidth <= 640 ? "flex" : "none", flexDirection: "column", position: "absolute", top: 56, left: 0, right: 0, background: "rgba(15,23,42,0.98)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(148,163,184,0.1)", zIndex: 99 },
+    navMobileItem: (active) => ({ padding: "14px 16px", width: "100%", textAlign: "left", border: "none", background: active ? "rgba(249,115,22,0.15)" : "transparent", color: active ? "#f97316" : "#64748b", cursor: "pointer", fontFamily: "inherit", fontWeight: active ? 700 : 400, fontSize: 12, transition: "all 0.2s", borderBottom: "1px solid rgba(148,163,184,0.05)" }),
     navItem: (active) => ({ padding: "6px 12px", borderRadius: 6, fontSize: 11, fontWeight: active ? 700 : 400, cursor: "pointer", border: "none", background: active ? "rgba(249,115,22,0.15)" : "transparent", color: active ? "#f97316" : "#64748b", transition: "all 0.2s", letterSpacing: "0.5px", whiteSpace: "nowrap" }),
-    page: { maxWidth: 1100, margin: "0 auto", padding: "24px 16px" },
-    card: { background: "rgba(15,23,42,0.6)", border: "1px solid rgba(148,163,184,0.1)", borderRadius: 12, padding: 20, backdropFilter: "blur(10px)" },
-    h1: { fontSize: 28, fontWeight: 900, letterSpacing: "-1px", lineHeight: 1.1 },
-    h2: { fontSize: 18, fontWeight: 700, letterSpacing: "-0.5px", marginBottom: 16 },
-    grid2: { display: "grid", gridTemplateColumns: "1fr", gap: 16 },
-    grid3: { display: "grid", gridTemplateColumns: "1fr", gap: 12 },
+    hamburger: { display: windowWidth <= 640 ? "flex" : "none", flexDirection: "column", gap: 5, background: "none", border: "none", cursor: "pointer", padding: "8px 0" },
+    hamburgerLine: { width: 24, height: 2, background: "#f97316", borderRadius: 1, transition: "all 0.3s" },
+    page: { maxWidth: 1100, margin: "0 auto", padding: windowWidth <= 480 ? "16px 12px" : windowWidth <= 768 ? "20px 16px" : "24px 24px" },
+    card: { background: "rgba(15,23,42,0.6)", border: "1px solid rgba(148,163,184,0.1)", borderRadius: 12, padding: windowWidth <= 480 ? 16 : 20, backdropFilter: "blur(10px)" },
+    h1: { fontSize: windowWidth <= 480 ? 24 : windowWidth <= 768 ? 32 : 36, fontWeight: 900, letterSpacing: "-1px", lineHeight: 1.1 },
+    h2: { fontSize: windowWidth <= 480 ? 16 : windowWidth <= 768 ? 18 : 22, fontWeight: 700, letterSpacing: "-0.5px", marginBottom: 16 },
+    grid2: { display: "grid", gridTemplateColumns: windowWidth > 768 ? "1fr 1fr" : "1fr", gap: windowWidth <= 480 ? 12 : 16 },
+    grid3: { display: "grid", gridTemplateColumns: windowWidth > 1024 ? "repeat(3, 1fr)" : windowWidth > 640 ? "1fr 1fr" : "1fr", gap: windowWidth <= 480 ? 10 : windowWidth > 640 ? 16 : 12 },
     badge: (color) => ({ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 700, background: `${color}22`, color, border: `1px solid ${color}44` }),
     btn: (variant = "primary") => ({
-      padding: "10px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: 11, letterSpacing: "0.5px", transition: "all 0.2s", minHeight: "44px", minWidth: "44px", touchAction: "manipulation",
+      padding: windowWidth <= 480 ? "8px 14px" : "10px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontFamily: "inherit", fontWeight: 700, fontSize: windowWidth <= 480 ? 10 : 11, letterSpacing: "0.5px", transition: "all 0.2s", minHeight: "44px", minWidth: "44px", touchAction: "manipulation",
       ...(variant === "primary" ? { background: "linear-gradient(135deg, #f97316, #ea580c)", color: "#fff" } : {}),
       ...(variant === "outline" ? { background: "transparent", color: "#64748b", border: "1px solid rgba(148,163,184,0.2)" } : {}),
       ...(variant === "ghost" ? { background: "rgba(148,163,184,0.08)", color: "#94a3b8" } : {}),
