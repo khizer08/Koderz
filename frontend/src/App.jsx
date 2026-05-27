@@ -1372,6 +1372,8 @@ function KoderzApp() {
     { id: "analyze", label: "Analyze", icon: "◎" },
   ];
 
+  const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1024);
+
   const styles = {
     app: { minHeight: "100vh", background: "#0a0f1e", color: "#e2e8f0", fontFamily: "'JetBrains Mono', 'Fira Code', monospace" },
     nav: { background: "rgba(15,23,42,0.95)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(148,163,184,0.08)", padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100, height: 56 },
@@ -1398,7 +1400,6 @@ function KoderzApp() {
   };
 
   // Responsive grid helper
-  const [windowWidth, setWindowWidth] = React.useState(typeof window !== "undefined" ? window.innerWidth : 1024);
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener("resize", handleResize, { passive: true });
