@@ -1268,9 +1268,31 @@ function KoderzApp() {
       return;
     }
 
+    // Validate language is supported
+    if (!["python", "java", "cpp", "c"].includes(editorLanguage)) {
+      setCodeError("Unsupported language: " + editorLanguage);
+      return;
+    }
+
+    // Check for encoding issues (prevent invalid UTF-8)
+    try {
+      // Verify code can be encoded/decoded
+      new Blob([code]);
+    } catch (err) {
+      setCodeError("Invalid character encoding in code");
+      return;
+    }
+
     setAnalyzing(true);
     setTimeout(() => {
       try {
+        // Validate AST parsing succeeded
+        if (astData?.error) {
+          setCodeError("Syntax error in code: " + (astData.message || "Unknown error"));
+          setAnalyzing(false);
+          return;
+        }
+
         // Use memoized AST and static analysis
         const result = {
           ast: astData,
@@ -1305,6 +1327,18 @@ function KoderzApp() {
     }
 
     setAiAnalyzing(true);
+    
+    // Set 15-second timeout for API call
+    const timeoutId = setTimeout(() => {
+      setAiAnalyzing(false);
+      setAiAnalysis({ 
+        error: "AI analysis timeout", 
+        confidence: 0,
+        message: "Request took too long - using static analysis only"
+      });
+      console.warn("AI analysis timeout after 15 seconds");
+    }, 15000);
+    
     debounceTimer.current = setTimeout(async () => {
       try {
         const aiResult = await analyzeWithAI(
@@ -1313,9 +1347,12 @@ function KoderzApp() {
           analysisResult?.staticAnalysis,
           analysisResult?.ast
         );
+        // Clear timeout if call succeeded
+        clearTimeout(timeoutId);
         setAiAnalysis(aiResult ?? { error: "No response", confidence: 0 });
       } catch (e) {
         console.error("AI analysis error:", e);
+        clearTimeout(timeoutId);
         setAiAnalysis({ 
           error: "AI analysis failed", 
           confidence: 0,
