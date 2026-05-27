@@ -1147,7 +1147,7 @@ function KoderzApp() {
   const [language, setLanguage] = useState("python");
 
   // Visualizer state
-  const [vizArray, setVizArray] = useState([38, 27, 43, 3, 9, 82, 10]);
+  const [vizArray, setVizArray] = useState([]);
   const [vizSteps, setVizSteps] = useState([]);
   const [vizStep, setVizStep] = useState(0);
   const [vizPlaying, setVizPlaying] = useState(false);
@@ -1222,14 +1222,40 @@ function KoderzApp() {
   const maxVal = vizArray.length ? Math.max(...vizArray) : 1;
 
   const generateArray = useCallback(() => {
-    const arr = Array.from({ length: 10 }, () => Math.floor(Math.random() * 95) + 5);
-    setVizArray(arr);
+    setArrayError(null);
+    setUserArrayInput("");
+    setArrayInputVisible(true);
+  }, []);
+
+  const applyUserArray = useCallback(() => {
+    const raw = userArrayInput.trim();
+    if (!raw) {
+      setArrayError("Enter 8 numbers separated by commas or spaces.");
+      return;
+    }
+
+    const values = raw.split(/[,\s]+/).filter(Boolean).map(v => Number(v));
+    if (values.some(v => Number.isNaN(v))) {
+      setArrayError("Array must contain only valid numbers.");
+      return;
+    }
+    if (values.length !== 8) {
+      setArrayError("Array must contain exactly 8 numbers.");
+      return;
+    }
+
+    setVizArray(values);
     setVizSteps([]);
     setVizStep(0);
     setVizPlaying(false);
-  }, []);
+    setArrayInputVisible(false);
+  }, [userArrayInput]);
 
   const startViz = useCallback(() => {
+    if (vizArray.length !== 8) {
+      setArrayError("Please enter exactly 8 numbers before starting the visualization.");
+      return;
+    }
     const steps = generateTrace(selectedAlgo, vizArray);
     setVizSteps(steps);
     setVizStep(0);
@@ -1712,12 +1738,41 @@ function KoderzApp() {
                 <div>
                   <div style={{ ...styles.card, marginBottom: 16 }}>
                     <div style={{ display: "flex", gap: 10, marginBottom: 20, alignItems: "center" }}>
-                      <button onClick={startViz} style={styles.btn("primary")}>▶ Start</button>
+                      <button onClick={startViz} disabled={vizArray.length !== 8} style={styles.btn("primary")}>▶ Start</button>
                       <button onClick={() => setVizPlaying(p => !p)} disabled={!vizSteps.length} style={styles.btn("ghost")}>{vizPlaying ? "⏸ Pause" : "⏵ Resume"}</button>
                       <button onClick={() => { setVizStep(0); setVizPlaying(false); }} disabled={!vizSteps.length} style={styles.btn("ghost")}>⟳ Reset</button>
                       <button onClick={generateArray} style={styles.btn("outline")}>⊞ New Array</button>
                       {vizSteps.length > 0 && <span style={{ fontSize: 11, color: "#64748b", marginLeft: "auto" }}>Step {vizStep + 1} / {vizSteps.length}</span>}
                     </div>
+
+                    {arrayInputVisible && (
+                      <div style={{ marginTop: 16, padding: 16, borderRadius: 12, background: "rgba(15,23,42,0.75)", border: "1px solid rgba(148,163,184,0.16)" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8" }}>Enter 8 values for the array</div>
+                          <button onClick={() => { setArrayInputVisible(false); setArrayError(null); }} style={{ ...styles.btn("ghost"), fontSize: 10, padding: "6px 10px" }}>Cancel</button>
+                        </div>
+                        <textarea
+                          value={userArrayInput}
+                          onChange={e => { setUserArrayInput(e.target.value); setArrayError(null); }}
+                          placeholder="Example: 5, 2, 8, 1, 4, 7, 3, 6"
+                          rows={3}
+                          style={{ width: "100%", borderRadius: 10, border: "1px solid rgba(148,163,184,0.2)", background: "#020917", color: "#e2e8f0", fontFamily: "inherit", fontSize: 13, padding: 12, resize: "vertical" }}
+                          aria-label="Array input for visualizer"
+                        />
+                        {arrayError && <div style={{ color: "#f87171", fontSize: 12, marginTop: 10 }}>{arrayError}</div>}
+                        <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+                          <button onClick={applyUserArray} style={styles.btn("primary")}>Load Array</button>
+                          <button onClick={() => { setUserArrayInput(""); setArrayError(null); }} style={styles.btn("ghost")}>Clear</button>
+                          <div style={{ fontSize: 11, color: "#94a3b8", alignSelf: "center" }}>Enter 8 numbers separated by commas or spaces.</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {vizArray.length !== 8 && !arrayInputVisible && (
+                      <div style={{ marginTop: 16, padding: 14, borderRadius: 12, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.15)", color: "#f87171", fontSize: 12 }}>
+                        Please click <strong>New Array</strong> and enter exactly 8 numbers to visualize sorting.
+                      </div>
+                    )}
 
                     {/* Bars */}
                     <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 200, padding: "0 4px" }}>
