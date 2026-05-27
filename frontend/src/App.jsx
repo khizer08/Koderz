@@ -1184,6 +1184,9 @@ function KoderzApp() {
   const [codeError, setCodeError] = useState(null);
   const [apiDisabled, setApiDisabled] = useState(!process.env.REACT_APP_GEMINI_API_KEY);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userArrayInput, setUserArrayInput] = useState("");
+  const [arrayInputVisible, setArrayInputVisible] = useState(false);
+  const [arrayError, setArrayError] = useState(null);
   const debounceTimer = useRef(null);
 
   // ─── Check API Key on Mount ────────────────────────────────────────────────
